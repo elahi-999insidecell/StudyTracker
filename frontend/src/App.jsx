@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import {
   getTasks,
   getSubjects,
+  createSubject,
   createTask,
   updateTask,
 } from "./api";
@@ -35,6 +36,10 @@ const [error, setError] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [newTask, setNewTask] = useState("");
   const [newSubject, setNewSubject] = useState("Software Engineering");
+  const [showSubjectForm, setShowSubjectForm] = useState(false);
+const [subjectName, setSubjectName] = useState("");
+const [subjectCode, setSubjectCode] = useState("");
+const [subjectColor, setSubjectColor] = useState("#31A88A");
   useEffect(() => {
   async function loadData() {
     try {
@@ -106,6 +111,40 @@ const [error, setError] = useState("");
     console.error(err);
   }
 }
+
+
+async function addSubject(event) {
+  event.preventDefault();
+
+  if (!subjectName.trim() || !subjectCode.trim()) {
+    setError("Please enter both a subject name and course code.");
+    return;
+  }
+
+  try {
+    setError("");
+
+    const savedSubject = await createSubject({
+      name: subjectName.trim(),
+      code: subjectCode.trim(),
+      color: subjectColor,
+    });
+
+    setSubjects((currentSubjects) => [
+      ...currentSubjects,
+      savedSubject,
+    ]);
+
+    setSubjectName("");
+    setSubjectCode("");
+    setSubjectColor("#31A88A");
+    setShowSubjectForm(false);
+  } catch (err) {
+    setError("Could not save the subject. Please try again.");
+    console.error(err);
+  }
+}
+
 
   async function toggleTask(id) {
   const task = tasks.find((item) => item.id === id);
@@ -324,11 +363,19 @@ const [error, setError] = useState("");
         {activePage === "Subjects" && (
           <section className="panel page-panel">
             <div className="panel-heading">
-              <div>
-                <h3>Your subjects</h3>
-                <p>Your courses in one place.</p>
-              </div>
-            </div>
+  <div>
+    <h3>Your subjects</h3>
+    <p>Your courses in one place.</p>
+  </div>
+
+  <button
+    type="button"
+    className="primary-button"
+    onClick={() => setShowSubjectForm(true)}
+  >
+    ＋ Add Subject
+  </button>
+</div>
             <div className="subjects-grid">
               {subjects.map((subject) => (
                 <div className="subject-card" key={subject.id}>
@@ -356,6 +403,78 @@ const [error, setError] = useState("");
             <p className="empty-note">Your assignment module is coming next.</p>
           </section>
         )}
+
+
+{showSubjectForm && (
+  <div
+    className="modal-backdrop"
+    onClick={() => setShowSubjectForm(false)}
+  >
+    <form
+      className="task-form"
+      onSubmit={addSubject}
+      onClick={(event) => event.stopPropagation()}
+    >
+      <div className="panel-heading">
+        <div>
+          <h3>Add a subject</h3>
+          <p>Add a course to organize your studies.</p>
+        </div>
+        <button
+          type="button"
+          className="close-button"
+          onClick={() => setShowSubjectForm(false)}
+        >
+          ×
+        </button>
+      </div>
+
+      <label>
+        Subject name
+        <input
+          autoFocus
+          required
+          value={subjectName}
+          onChange={(event) => {
+            setSubjectName(event.target.value);
+            setError("");
+          }}
+          placeholder="e.g. Software Testing"
+        />
+      </label>
+
+      <label>
+        Course code
+        <input
+          required
+          value={subjectCode}
+          onChange={(event) => {
+            setSubjectCode(event.target.value);
+            setError("");
+          }}
+          placeholder="e.g. CSE 3211"
+        />
+      </label>
+
+      <label>
+        Subject color
+        <input
+          type="color"
+          value={subjectColor}
+          onChange={(event) => setSubjectColor(event.target.value)}
+        />
+      </label>
+
+      <button
+        className="primary-button full-button"
+        type="submit"
+      >
+        Create subject
+      </button>
+    </form>
+  </div>
+)}
+
 
         {showForm && (
           <div className="modal-backdrop" onClick={() => setShowForm(false)}>
