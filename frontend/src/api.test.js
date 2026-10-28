@@ -4,6 +4,7 @@ import {
   getSubjects,
   createTask,
   updateTask,
+  createSubject,
 } from "./api";
 
 afterEach(() => {
@@ -79,4 +80,47 @@ describe("API helpers", () => {
     await expect(updateTask(1, true))
       .rejects.toThrow("Failed to update task");
   });
+
+
+
+
+it("creates a subject successfully", async () => {
+  const subject = {
+    id: 7,
+    name: "Software Testing",
+    code: "CSE 3211",
+    color: "#31A88A",
+  };
+
+  mockFetch({
+    ok: true,
+    json: () => Promise.resolve(subject),
+  });
+
+  await expect(
+    createSubject({
+      name: "Software Testing",
+      code: "CSE 3211",
+      color: "#31A88A",
+    })
+  ).resolves.toEqual(subject);
+
+  expect(fetch).toHaveBeenCalledWith(
+    expect.stringContaining("/subjects"),
+    expect.objectContaining({ method: "POST" })
+  );
+});
+
+it("throws when subject creation fails", async () => {
+  mockFetch({ ok: false });
+
+  await expect(
+    createSubject({
+      name: "Software Testing",
+      code: "CSE 3211",
+      color: "#31A88A",
+    })
+  ).rejects.toThrow("Failed to create subject");
+});
+
 });

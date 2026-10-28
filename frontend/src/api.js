@@ -22,6 +22,24 @@ export async function getSubjects() {
   return response.json();
 }
 
+
+
+export async function createSubject(subject) {
+  const response = await fetch(`${API_URL}/subjects`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(subject),
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to create subject");
+  }
+
+  return response.json();
+}
+
 export async function createTask(task) {
   const response = await fetch(`${API_URL}/tasks`, {
     method: "POST",
