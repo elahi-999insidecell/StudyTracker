@@ -1,3 +1,4 @@
+import { validateTaskTitle } from "./taskValidation";
 import { getCompletionStats } from "./taskUtils";
 import { useEffect, useState } from "react";
 import {
@@ -70,7 +71,10 @@ const [error, setError] = useState("");
   async function addTask(event) {
   event.preventDefault();
 
-  if (!newTask.trim()) return;
+  if (!validateTaskTitle(newTask)) {
+  setError("Please enter a valid task title.");
+  return;
+}
 
   const selectedSubject = subjects.find(
     (subject) => subject.name === newSubject
@@ -369,7 +373,10 @@ const [error, setError] = useState("");
                   autoFocus
                   required
                   value={newTask}
-                  onChange={(event) => setNewTask(event.target.value)}
+                  onChange={(event) => {
+  setNewTask(event.target.value);
+  setError("");
+}}
                   placeholder="e.g. Revise chapter 3"
                 />
               </label>
