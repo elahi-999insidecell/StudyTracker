@@ -1,0 +1,23 @@
+# Dependencies
+node_modules/
+frontend/node_modules/
+server/node_modules/
+
+# Environment variables
+.env
+.env.*
+!.env.example
+frontend/.env
+server/.env
+
+# Build output
+frontend/dist/
+
+# Local database
+server/*.db
+server/*.db-shm
+server/*.db-wal
+
+# Logs and system files
+*.log
+.DS_Store
