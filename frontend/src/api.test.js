@@ -5,6 +5,7 @@ import {
   createTask,
   updateTask,
   createSubject,
+  deleteSubject,
 } from "./api";
 
 afterEach(() => {
@@ -121,6 +122,40 @@ it("throws when subject creation fails", async () => {
       color: "#31A88A",
     })
   ).rejects.toThrow("Failed to create subject");
+});
+
+
+it("deletes a subject successfully", async () => {
+  const result = {
+    message: "Subject deleted successfully.",
+    id: 7,
+  };
+
+  mockFetch({
+    ok: true,
+    json: () => Promise.resolve(result),
+  });
+
+  await expect(deleteSubject(7)).resolves.toEqual(result);
+
+  expect(fetch).toHaveBeenCalledWith(
+    expect.stringContaining("/subjects/7"),
+    expect.objectContaining({ method: "DELETE" })
+  );
+});
+
+it("throws the backend error when subject deletion fails", async () => {
+  mockFetch({
+    ok: false,
+    json: () =>
+      Promise.resolve({
+        error: "Cannot delete a subject that has associated tasks.",
+      }),
+  });
+
+  await expect(deleteSubject(7)).rejects.toThrow(
+    "Cannot delete a subject that has associated tasks."
+  );
 });
 
 });

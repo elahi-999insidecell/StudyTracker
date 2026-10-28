@@ -821,3 +821,29 @@ footer span {
   border: 1px solid #f2c4c4;
   border-radius: 10px;
 }
+
+.subject-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.delete-subject-button {
+  border: 1px solid #f0b8b8;
+  background: #fff5f5;
+  color: #c0392b;
+  border-radius: 8px;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  transition: background 0.2s ease;
+}
+
+.delete-subject-button:hover {
+  background: #ffe5e5;
+}
+
+.delete-subject-button:focus-visible {
+  outline: 2px solid #c0392b;
+  outline-offset: 2px;
+}
