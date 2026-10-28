@@ -94,6 +94,47 @@ app.post("/api/subjects", (req, res) => {
   res.status(201).json(subject);
 });
 
+
+
+ // Delete a subject if it has no associated tasks
+app.delete("/api/subjects/:id", (req, res) => {
+  const subjectId = Number(req.params.id);
+
+  if (!Number.isInteger(subjectId) || subjectId <= 0) {
+    return res.status(400).json({
+      error: "Invalid subject ID.",
+    });
+  }
+
+  const subject = db
+    .prepare("SELECT * FROM subjects WHERE id = ?")
+    .get(subjectId);
+
+  if (!subject) {
+    return res.status(404).json({
+      error: "Subject not found.",
+    });
+  }
+
+  const taskCount = db
+    .prepare("SELECT COUNT(*) AS count FROM tasks WHERE subject_id = ?")
+    .get(subjectId).count;
+
+  if (taskCount > 0) {
+    return res.status(409).json({
+      error: "Cannot delete a subject that has associated tasks.",
+    });
+  }
+
+  db.prepare("DELETE FROM subjects WHERE id = ?").run(subjectId);
+
+  return res.json({
+    message: "Subject deleted successfully.",
+    id: subjectId,
+  });
+});
+
+
 // Get all tasks, including their subject names
 app.get("/api/tasks", (req, res) => {
   const tasks = db.prepare(`

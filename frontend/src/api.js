@@ -67,3 +67,17 @@ export async function updateTask(id, completed) {
 
   return response.json();
 }
+
+
+export async function deleteSubject(id) {
+  const response = await fetch(`${API_URL}/subjects/${id}`, {
+    method: "DELETE",
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || "Failed to delete subject");
+  }
+
+  return response.json();
+}

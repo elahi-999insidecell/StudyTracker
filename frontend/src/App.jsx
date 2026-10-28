@@ -7,6 +7,7 @@ import {
   createSubject,
   createTask,
   updateTask,
+  deleteSubject,
 } from "./api";
 
 import "./App.css";
@@ -142,6 +143,24 @@ async function addSubject(event) {
   } catch (err) {
     setError("Could not save the subject. Please try again.");
     console.error(err);
+  }
+}
+
+async function handleDeleteSubject(subject) {
+  const confirmed = window.confirm(
+    `Are you sure you want to delete "${subject.name}"?`
+  );
+
+  if (!confirmed) return;
+
+  try {
+    await deleteSubject(subject.id);
+
+    setSubjects((currentSubjects) =>
+      currentSubjects.filter((item) => item.id !== subject.id)
+    );
+  } catch (err) {
+    setError(err.message || "Failed to delete subject.");
   }
 }
 
@@ -382,10 +401,18 @@ async function addSubject(event) {
                   <div className="subject-mark" style={{ background: subject.color }}>
                     {subject.name.charAt(0)}
                   </div>
-                  <div>
-                    <strong>{subject.name}</strong>
-                    <p>{subject.code}</p>
-                  </div>
+                  <div className="subject-info">
+  <strong>{subject.name}</strong>
+  <p>{subject.code}</p>
+</div>
+
+<button
+  type="button"
+  className="delete-subject-button"
+  onClick={() => handleDeleteSubject(subject)}
+>
+  Delete
+</button>
                 </div>
               ))}
             </div>
