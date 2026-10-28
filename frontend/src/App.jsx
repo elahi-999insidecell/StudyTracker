@@ -1,6 +1,6 @@
 import { validateTaskTitle } from "./taskValidation";
 import { getCompletionStats } from "./taskUtils";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   getTasks,
   getSubjects,
@@ -9,6 +9,12 @@ import {
   updateTask,
   deleteSubject,
 } from "./api";
+import {
+  createNotificationFactories,
+  InlineNotificationService,
+  NotificationServiceAdapter,
+} from "./notificationPatterns";
+import { DashboardProgressObserver, TaskEventSubject } from "./taskObservers";
 
 import "./App.css";
 
@@ -34,6 +40,19 @@ function App() {
 const [subjects, setSubjects] = useState([]);
 const [loading, setLoading] = useState(true);
 const [error, setError] = useState("");
+  const [notice, setNotice] = useState(null);
+  const [taskStats, setTaskStats] = useState(() => getCompletionStats([]));
+  const notificationFactories = useMemo(() => createNotificationFactories(), []);
+  const notificationService = useMemo(
+    () => new NotificationServiceAdapter(new InlineNotificationService(setNotice)),
+    []
+  );
+  const taskSubject = useMemo(() => new TaskEventSubject(), []);
+  const showNotification = (type, message) => {
+    const factory = notificationFactories[type];
+    if (!factory) throw new Error(`Unknown notification type: ${type}`);
+    factory.createNotification(message).show(notificationService);
+  };
   const [showForm, setShowForm] = useState(false);
   const [newTask, setNewTask] = useState("");
   const [newSubject, setNewSubject] = useState("Software Engineering");
@@ -51,18 +70,19 @@ const [subjectColor, setSubjectColor] = useState("#31A88A");
         getSubjects(),
       ]);
 
-      setTasks(
-        taskData.map((task) => ({
-          ...task,
-          subject: task.subject || "No subject",
-          due: task.due_date || "Not set",
-          done: Boolean(task.completed),
-        }))
-      );
+      const loadedTasks = taskData.map((task) => ({
+        ...task,
+        subject: task.subject || "No subject",
+        due: task.due_date || "Not set",
+        done: Boolean(task.completed),
+      }));
+      setTasks(loadedTasks);
+      taskSubject.notify(loadedTasks);
 
       setSubjects(subjectData);
     } catch (err) {
       setError("Could not load data. Check that the backend is running.");
+      showNotification("error", "Could not load data. Check that the backend is running.");
       console.error(err);
     } finally {
       setLoading(false);
@@ -72,7 +92,14 @@ const [subjectColor, setSubjectColor] = useState("#31A88A");
   loadData();
 }, []);
 
-   const { completed, progress } = getCompletionStats(tasks);
+  // Observer registration: dashboard progress listens for task-list changes.
+  useEffect(() => {
+    const dashboardObserver = new DashboardProgressObserver(setTaskStats);
+    taskSubject.attach(dashboardObserver);
+    return () => taskSubject.detach(dashboardObserver);
+  }, [taskSubject]);
+
+  const { completed, progress } = taskStats;
 
   async function addTask(event) {
   event.preventDefault();
@@ -95,20 +122,24 @@ const [subjectColor, setSubjectColor] = useState("#31A88A");
       priority: "Medium",
     });
 
-    setTasks((currentTasks) => [
+    const updatedTasks = [
       {
         ...savedTask,
         subject: selectedSubject?.name || "No subject",
         due: savedTask.due_date || "Not set",
         done: Boolean(savedTask.completed),
       },
-      ...currentTasks,
-    ]);
+      ...tasks,
+    ];
+    setTasks(updatedTasks);
+    taskSubject.notify(updatedTasks);
 
     setNewTask("");
     setShowForm(false);
+    showNotification("success", "Study task created successfully.");
   } catch (err) {
-    setError("Could not save the task. Please try again.");
+    setError("");
+    showNotification("error", "Could not save the task. Please try again.");
     console.error(err);
   }
 }
@@ -140,8 +171,10 @@ async function addSubject(event) {
     setSubjectCode("");
     setSubjectColor("#31A88A");
     setShowSubjectForm(false);
+    showNotification("success", "Subject created successfully.");
   } catch (err) {
-    setError("Could not save the subject. Please try again.");
+    setError("");
+    showNotification("error", "Could not save the subject. Please try again.");
     console.error(err);
   }
 }
@@ -159,8 +192,10 @@ async function handleDeleteSubject(subject) {
     setSubjects((currentSubjects) =>
       currentSubjects.filter((item) => item.id !== subject.id)
     );
+    showNotification("success", "Subject deleted successfully.");
   } catch (err) {
-    setError(err.message || "Failed to delete subject.");
+    setError("");
+    showNotification("error", err.message || "Failed to delete subject.");
   }
 }
 
@@ -172,24 +207,26 @@ async function handleDeleteSubject(subject) {
 
   const newCompleted = !task.done;
 
-  // Update the UI immediately
-  setTasks((currentTasks) =>
-    currentTasks.map((item) =>
-      item.id === id ? { ...item, done: newCompleted } : item
-    )
+  // Update the UI immediately and notify registered task observers.
+  const optimisticTasks = tasks.map((item) =>
+    item.id === id ? { ...item, done: newCompleted } : item
   );
+  setTasks(optimisticTasks);
+  taskSubject.notify(optimisticTasks);
 
   try {
     await updateTask(id, newCompleted);
+    showNotification("success", newCompleted ? "Task marked as completed." : "Task marked as incomplete.");
   } catch (err) {
     // Revert the UI if saving fails
-    setTasks((currentTasks) =>
-      currentTasks.map((item) =>
-        item.id === id ? { ...item, done: task.done } : item
-      )
+    const revertedTasks = tasks.map((item) =>
+      item.id === id ? { ...item, done: task.done } : item
     );
+    setTasks(revertedTasks);
+    taskSubject.notify(revertedTasks);
 
-    setError("Could not update task status.");
+    setError("");
+    showNotification("error", "Could not update task status.");
     console.error(err);
   }
 }
@@ -258,6 +295,12 @@ async function handleDeleteSubject(subject) {
     {error}
   </p>
 )}
+        {notice && (
+          <div className={`app-notice ${notice.type}`} role={notice.type === "error" ? "alert" : "status"}>
+            <span>{notice.message}</span>
+            <button type="button" aria-label="Dismiss notification" onClick={() => setNotice(null)}>×</button>
+          </div>
+        )}
         <header className="topbar">
           <div>
             <p className="eyebrow">YOUR PERSONAL STUDY PLANNER</p>
