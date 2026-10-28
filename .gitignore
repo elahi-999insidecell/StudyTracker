@@ -21,3 +21,5 @@ server/*.db-wal
 # Logs and system files
 *.log
 .DS_Store
+
+frontend/coverage/
